@@ -34,6 +34,8 @@ source "sound/soc/s3c24xx/Kconfig"
 source "sound/soc/s3c/Kconfig"
 source "sound/soc/sh/Kconfig"
 
+source "sound/soc/codecs/Kconfig.voodoo"
+
 # Supported codecs
 source "sound/soc/codecs/Kconfig"
 

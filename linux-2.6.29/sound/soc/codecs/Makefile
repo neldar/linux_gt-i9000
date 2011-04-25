@@ -24,7 +24,11 @@ snd-soc-wm8900-objs := wm8900.o
 snd-soc-wm8903-objs := wm8903.o
 snd-soc-wm8971-objs := wm8971.o
 snd-soc-wm8990-objs := wm8990.o
+ifeq ($(CONFIG_SND_VOODOO),y)
+snd-soc-wm8994-objs := wm8994.o wm8994_aries.o wm8994_voodoo.o
+else
 snd-soc-wm8994-objs := wm8994.o wm8994_aries.o
+endif
 snd-soc-wm9712-objs := wm9712.o
 snd-soc-wm9713-objs := wm9713.o
 
@@ -57,3 +61,7 @@ obj-$(CONFIG_SND_SOC_WM8990)	+= snd-soc-wm8990.o
 obj-$(CONFIG_SND_SOC_WM8994)	+= snd-soc-wm8994.o
 obj-$(CONFIG_SND_SOC_WM9712)	+= snd-soc-wm9712.o
 obj-$(CONFIG_SND_SOC_WM9713)	+= snd-soc-wm9713.o
+
+ifeq ($(CONFIG_SND_VOODOO_MODULE),m)
+obj-$(CONFIG_SND_VOODOO_MODULE)	+= voodoo-sound-tegrak-module/
+endif
