@@ -31,7 +31,6 @@
 #endif
 
 #define SUBJECT "wm8994_voodoo.c"
-#define VOODOO_SOUND_VERSION 8
 
 #ifdef MODULE
 #include "tegrak_voodoo_sound.h"
