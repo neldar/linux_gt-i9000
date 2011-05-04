@@ -549,8 +549,9 @@ unsigned short dac_direct_get_value(unsigned short val, bool can_reverse)
 	if ((is_path(HEADPHONES)
 	     && (wm8994->codec_state & PLAYBACK_ACTIVE)
 	     && (wm8994->stream_state & PCM_STREAM_PLAYBACK)
-	     && !(wm8994->codec_state & CALL_ACTIVE))
-	     || is_path(RADIO_HEADPHONES)) {
+	     && !(wm8994->codec_state & CALL_ACTIVE)
+	     && (wm8994->rec_path == MIC_OFF)
+	    ) || is_path(RADIO_HEADPHONES)) {
 
 		if (dac_direct) {
 			if (val == WM8994_DAC1L_TO_MIXOUTL)
