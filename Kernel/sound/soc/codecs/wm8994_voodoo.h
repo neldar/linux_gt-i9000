@@ -46,4 +46,5 @@ void update_osr128(bool with_mute);
 void update_fll_tuning(bool with_mute);
 void update_mono_downmix(bool with_mute);
 void update_dac_direct(bool with_mute);
+void update_digital_headroom(bool with_mute);
 void update_enable(void);

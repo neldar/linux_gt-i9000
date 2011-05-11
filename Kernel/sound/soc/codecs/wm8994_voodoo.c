@@ -81,6 +81,8 @@ bool fll_tuning = true;
 bool dac_direct = true;
 bool mono_downmix = false;
 
+int digital_headroom = 0;
+
 // keep here a pointer to the codec structure
 struct snd_soc_codec *codec;
 
@@ -109,6 +111,31 @@ static ssize_t name##_store(struct device *dev, struct device_attribute *attr, \
 #define DECLARE_WM8994(codec) struct wm8994_priv *wm8994 = codec->private_data;
 #endif
 
+
+int hpvol(int channel)
+{
+	int hpvol;
+	DECLARE_WM8994(codec);
+
+	if (channel == 0)
+		hpvol = hplvol;
+	else
+		hpvol = hprvol;
+
+	if ((is_path(HEADPHONES)
+	     && (wm8994->codec_state & PLAYBACK_ACTIVE)
+	     && (wm8994->stream_state & PCM_STREAM_PLAYBACK)
+	     && !(wm8994->codec_state & CALL_ACTIVE)
+	     && (wm8994->rec_path == MIC_OFF)
+	    ) || is_path(RADIO_HEADPHONES)) {
+		hpvol = (hpvol + digital_headroom);
+		if (hpvol > 62)
+			return 62;
+	}
+
+	return hpvol;
+}
+
 #ifdef CONFIG_SND_VOODOO_HP_LEVEL_CONTROL
 void update_hpvol()
 {
@@ -124,13 +151,13 @@ void update_hpvol()
 	bypass_write_hook = true;
 
 	// we don't need the Volume Update flag when sending the first volume
-	val = (WM8994_HPOUT1L_MUTE_N | hplvol);
+	val = (WM8994_HPOUT1L_MUTE_N | hpvol(0));
 	val |= WM8994_HPOUT1L_ZC;
 	wm8994_write(codec, WM8994_LEFT_OUTPUT_VOLUME, val);
 
 	// this time we write the right volume plus the Volume Update flag.
-	//This way, both volume are set at the same time
-	val = (WM8994_HPOUT1_VU | WM8994_HPOUT1R_MUTE_N | hprvol);
+	// This way, both volume are set at the same time
+	val = (WM8994_HPOUT1_VU | WM8994_HPOUT1R_MUTE_N | hpvol(1));
 	val |= WM8994_HPOUT1L_ZC;
 	wm8994_write(codec, WM8994_RIGHT_OUTPUT_VOLUME, val);
 	bypass_write_hook = false;
@@ -580,6 +607,51 @@ void update_dac_direct(bool with_mute)
 	bypass_write_hook = false;
 }
 
+unsigned short digital_headroom_get_value(unsigned short val)
+{
+	DECLARE_WM8994(codec);
+
+	if ((is_path(HEADPHONES)
+	     && (wm8994->codec_state & PLAYBACK_ACTIVE)
+	     && (wm8994->stream_state & PCM_STREAM_PLAYBACK)
+	     && !(wm8994->codec_state & CALL_ACTIVE)
+	     && (wm8994->rec_path == MIC_OFF)
+	    ) || is_path(RADIO_HEADPHONES)) {
+
+		switch (digital_headroom) {
+		case 0:		return 0xC0;	// 0 dB
+		case 1:		return 0xBD;	// -1.125 dB
+		case 2:		return 0xBB;	// -1.875 dB
+		case 3:		return 0xB8;	// -3 dB dB
+		case 4:		return 0xB5;	// -4.125 dB
+		case 5:		return 0xB3;	// -4.875 dB
+		case 6:		return 0xB0;	// -6 dB
+		case 7:		return 0xAD;	// -7.125 dB
+		case 8:		return 0xAB;	// -7.875 dB
+		case 9:		return 0xA8;	// -9 dB
+		case 10:	return 0xA5;	// -10.125 dB
+		case 11:	return 0xA3;	// -10.875 dB
+		case 12:	return 0xA0;	// -12 dB
+		}
+	}
+
+	return val;
+}
+
+void update_digital_headroom(bool with_mute)
+{
+	unsigned short val1, val2;
+	val1 = digital_headroom_get_value(wm8994_read(codec,
+						WM8994_DAC1_LEFT_VOLUME));
+	val2 = digital_headroom_get_value(wm8994_read(codec,
+						WM8994_DAC1_RIGHT_VOLUME));
+
+	bypass_write_hook = true;
+	wm8994_write(codec, WM8994_DAC1_LEFT_VOLUME, WM8994_DAC1_VU | val1);
+	wm8994_write(codec, WM8994_DAC1_RIGHT_VOLUME, WM8994_DAC1_VU | val2);
+	bypass_write_hook = false;
+}
+
 /*
  *
  * Declaring the controling misc devices
@@ -609,6 +681,7 @@ static ssize_t headphone_amplifier_level_store(struct device *dev,
 			hprvol = 62;
 
 		update_hpvol();
+		update_digital_headroom(false);
 	}
 	return size;
 }
@@ -682,6 +755,35 @@ DECLARE_BOOL_SHOW(dac_direct);
 DECLARE_BOOL_STORE_UPDATE_WITH_MUTE(dac_direct,
 				    update_dac_direct,
 				    false);
+
+static ssize_t digital_headroom_show(struct device *dev,
+				     struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", digital_headroom);
+}
+
+static ssize_t digital_headroom_store(struct device *dev,
+				      struct device_attribute *attr,
+				      const char *buf, size_t size)
+{
+	unsigned short new_headroom_value;
+	if (sscanf(buf, "%hu", &new_headroom_value) == 1) {
+		if (new_headroom_value >= 0 && new_headroom_value <= 12) {
+			if (new_headroom_value < digital_headroom) {
+				// reduce analog volume first
+				digital_headroom = new_headroom_value;
+				update_hpvol();
+				update_digital_headroom(false);
+			} else {
+				// reduce digital volume first
+				digital_headroom = new_headroom_value;
+				update_digital_headroom(false);
+				update_hpvol();
+			}
+		}
+	}
+	return size;
+}
 
 #ifdef CONFIG_SND_VOODOO_DEBUG
 static ssize_t show_wm8994_register_dump(struct device *dev,
@@ -854,6 +956,10 @@ static DEVICE_ATTR(dac_direct, S_IRUGO | S_IWUGO,
 		   dac_direct_show,
 		   dac_direct_store);
 
+static DEVICE_ATTR(digital_headroom, S_IRUGO | S_IWUGO,
+		   digital_headroom_show,
+		   digital_headroom_store);
+
 static DEVICE_ATTR(mono_downmix, S_IRUGO | S_IWUGO,
 		   mono_downmix_show,
 		   mono_downmix_store);
@@ -903,6 +1009,7 @@ static struct attribute *voodoo_sound_attributes[] = {
 	&dev_attr_adc_osr128.attr,
 	&dev_attr_fll_tuning.attr,
 	&dev_attr_dac_direct.attr,
+	&dev_attr_digital_headroom.attr,
 	&dev_attr_mono_downmix.attr,
 #ifdef CONFIG_SND_VOODOO_DEBUG
 	&dev_attr_wm8994_register_dump.attr,
@@ -1044,13 +1151,13 @@ unsigned int voodoo_hook_wm8994_write(struct snd_soc_codec *codec_,
 				value =
 				    (WM8994_HPOUT1_VU |
 				     WM8994_HPOUT1L_MUTE_N |
-				     hplvol);
+				     hpvol(0));
 
 			if (reg == WM8994_RIGHT_OUTPUT_VOLUME)
 				value =
 				    (WM8994_HPOUT1_VU |
 				     WM8994_HPOUT1R_MUTE_N |
-				     hprvol);
+				     hpvol(1));
 		}
 #endif
 
@@ -1090,6 +1197,11 @@ unsigned int voodoo_hook_wm8994_write(struct snd_soc_codec *codec_,
 		if (reg == WM8994_OUTPUT_MIXER_1
 		    || reg == WM8994_OUTPUT_MIXER_2)
 			value = dac_direct_get_value(value, false);
+
+		// Digital Headroom virtual hook
+		if (reg == WM8994_DAC1_LEFT_VOLUME
+		    || reg == WM8994_DAC1_RIGHT_VOLUME)
+			value = digital_headroom_get_value(value);
 
 	}
 #ifdef CONFIG_SND_VOODOO_DEBUG_LOG
