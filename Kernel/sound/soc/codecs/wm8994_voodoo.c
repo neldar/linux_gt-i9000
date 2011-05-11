@@ -85,29 +85,29 @@ bool mono_downmix = false;
 unsigned int digital_headroom = 0;
 
 bool headphone_eq = true;
-short eq_gains[5] = { 0, 0, 0, 0, 0};
+short eq_gains[5] = { 0, 0, 0, 0, 0 };
 unsigned int eq_commands[15];
 
 // keep here a pointer to the codec structure
 struct snd_soc_codec *codec;
 
-#define DECLARE_BOOL_SHOW(name) \
-static ssize_t name##_show(struct device *dev, \
-struct device_attribute *attr, char *buf) \
-{ \
-	return sprintf(buf,"%u\n",(name ? 1 : 0)); \
+#define DECLARE_BOOL_SHOW(name) 					       \
+static ssize_t name##_show(struct device *dev,				       \
+struct device_attribute *attr, char *buf)				       \
+{									       \
+	return sprintf(buf,"%u\n",(name ? 1 : 0));			       \
 }
 
-#define DECLARE_BOOL_STORE_UPDATE_WITH_MUTE(name, updater, with_mute) \
+#define DECLARE_BOOL_STORE_UPDATE_WITH_MUTE(name, updater, with_mute)	       \
 static ssize_t name##_store(struct device *dev, struct device_attribute *attr, \
-	const char *buf, size_t size) \
-{ \
-	unsigned short state; \
-	if (sscanf(buf, "%hu", &state) == 1) { \
-		name = state == 0 ? false : true; \
-		updater(with_mute); \
-	} \
-	return size; \
+	const char *buf, size_t size)					       \
+{									       \
+	unsigned short state;						       \
+	if (sscanf(buf, "%hu", &state) == 1) {				       \
+		name = state == 0 ? false : true;			       \
+		updater(with_mute);					       \
+	}								       \
+	return size;							       \
 }
 
 #define DECLARE_EQ_GAIN_SHOW(band)					       \
@@ -173,7 +173,7 @@ void update_hpvol()
 	// when not on heapdhones or if call is active
 	if (!is_path(HEADPHONES)
 	    || (wm8994->codec_state & CALL_ACTIVE))
-	    return;
+	    	return;
 
 	bypass_write_hook = true;
 
