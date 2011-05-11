@@ -1315,7 +1315,8 @@ unsigned int voodoo_hook_wm8994_write(struct snd_soc_codec *codec_,
 		// Digital Headroom virtual hook
 		if (reg == WM8994_DAC1_LEFT_VOLUME
 		    || reg == WM8994_DAC1_RIGHT_VOLUME)
-			value = digital_headroom_get_value(value);
+			value = digital_headroom_get_value(value |
+							   WM8994_DAC1_VU);
 
 	}
 #ifdef CONFIG_SND_VOODOO_DEBUG_LOG
