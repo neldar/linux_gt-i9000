@@ -645,20 +645,23 @@ unsigned short digital_headroom_get_value(unsigned short val)
 	     && (wm8994->rec_path == MIC_OFF)
 	    ) || is_path(RADIO_HEADPHONES)) {
 
+		// clear the actual DAC volume for this value
+		val &= ~(WM8994_DAC1R_VOL_MASK);
+
 		switch (digital_headroom) {
-		case 0:		return 0xC0;	// 0 dB
-		case 1:		return 0xBD;	// -1.125 dB
-		case 2:		return 0xBB;	// -1.875 dB
-		case 3:		return 0xB8;	// -3 dB dB
-		case 4:		return 0xB5;	// -4.125 dB
-		case 5:		return 0xB3;	// -4.875 dB
-		case 6:		return 0xB0;	// -6 dB
-		case 7:		return 0xAD;	// -7.125 dB
-		case 8:		return 0xAB;	// -7.875 dB
-		case 9:		return 0xA8;	// -9 dB
-		case 10:	return 0xA5;	// -10.125 dB
-		case 11:	return 0xA3;	// -10.875 dB
-		case 12:	return 0xA0;	// -12 dB
+		case 0:		val |= 0xC0;	break;	// 0 dB
+		case 1:		val |= 0xBD;	break;	// -1.125 dB
+		case 2:		val |= 0xBB;	break;	// -1.875 dB
+		case 3:		val |= 0xB8;	break;	// -3 dB dB
+		case 4:		val |= 0xB5;	break;	// -4.125 dB
+		case 5:		val |= 0xB3;	break;	// -4.875 dB
+		case 6:		val |= 0xB0;	break;	// -6 dB
+		case 7:		val |= 0xAD;	break;	// -7.125 dB
+		case 8:		val |= 0xAB;	break;	// -7.875 dB
+		case 9:		val |= 0xA8;	break;	// -9 dB
+		case 10:	val |= 0xA5;	break;	// -10.125 dB
+		case 11:	val |= 0xA3;	break;	// -10.875 dB
+		case 12:	val |= 0xA0;	break;	// -12 dB
 		}
 	}
 
@@ -1329,8 +1332,7 @@ unsigned int voodoo_hook_wm8994_write(struct snd_soc_codec *codec_,
 		// Digital Headroom virtual hook
 		if (reg == WM8994_DAC1_LEFT_VOLUME
 		    || reg == WM8994_DAC1_RIGHT_VOLUME)
-			value = digital_headroom_get_value(value |
-							   WM8994_DAC1_VU);
+			value = digital_headroom_get_value(value);
 
 		// Headphones EQ virtual hook
 		if (reg == WM8994_AIF1_DAC1_FILTERS_1
