@@ -37,6 +37,8 @@ void voodoo_hook_wm8994_pcm_remove(void);
 void voodoo_hook_record_main_mic(void);
 void voodoo_hook_playback_speaker(void);
 
+void load_default_eq_values(void);
+
 void update_hpvol(void);
 void update_fm_radio_headset_restore_freqs(bool with_mute);
 void update_fm_radio_headset_normalize_gain(bool with_mute);

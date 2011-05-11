@@ -81,7 +81,12 @@ bool fll_tuning = true;
 bool dac_direct = true;
 bool mono_downmix = false;
 
-int digital_headroom = 0;
+// equalizer
+unsigned int digital_headroom = 0;
+
+bool headphone_eq = true;
+short eq_gains[5] = { 0, 0, 0, 0, 0};
+unsigned int eq_commands[15];
 
 // keep here a pointer to the codec structure
 struct snd_soc_codec *codec;
@@ -105,12 +110,34 @@ static ssize_t name##_store(struct device *dev, struct device_attribute *attr, \
 	return size; \
 }
 
+#define DECLARE_EQ_GAIN_SHOW(band)					       \
+static ssize_t headphone_eq_b##band##_gain_show(struct device *dev,	       \
+					 struct device_attribute *attr,	       \
+					 char *buf)			       \
+{									       \
+	return sprintf(buf, "%d\n", eq_gains[band-1]);			       \
+}
+
+#define DECLARE_EQ_GAIN_STORE(band)					       \
+static ssize_t headphone_eq_b##band##_gain_store(struct device *dev,	       \
+					  struct device_attribute *attr,       \
+					  const char *buf, size_t size)	       \
+{									       \
+	short new_gain;							       \
+	if (sscanf(buf, "%hd", &new_gain) == 1) {			       \
+		if (new_gain >= -12 && new_gain <= 12) {		       \
+			eq_gains[band-1] = new_gain;			       \
+			update_headphone_eq(false);			       \
+		}							       \
+	}								       \
+	return size;							       \
+}
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 35)
 #define DECLARE_WM8994(codec) struct wm8994_priv *wm8994 = codec->drvdata;
 #else
 #define DECLARE_WM8994(codec) struct wm8994_priv *wm8994 = codec->private_data;
 #endif
-
 
 int hpvol(int channel)
 {
@@ -652,6 +679,47 @@ void update_digital_headroom(bool with_mute)
 	bypass_write_hook = false;
 }
 
+void update_headphone_eq(bool with_mute)
+{
+	int gains_1 =
+	    ((eq_gains[0] + 12) << WM8994_AIF1DAC1_EQ_B1_GAIN_SHIFT) |
+	    ((eq_gains[1] + 12) << WM8994_AIF1DAC1_EQ_B2_GAIN_SHIFT) |
+	    ((eq_gains[2] + 12) << WM8994_AIF1DAC1_EQ_B3_GAIN_SHIFT) |
+	    headphone_eq;
+
+	int gains_2 =
+	    ((eq_gains[3] + 12) << WM8994_AIF1DAC1_EQ_B4_GAIN_SHIFT) |
+	    ((eq_gains[4] + 12) << WM8994_AIF1DAC1_EQ_B5_GAIN_SHIFT);
+
+	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_GAINS_1, gains_1);
+	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_GAINS_2, gains_2);
+
+	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_1_A,  eq_commands[0]);
+	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_1_B,  eq_commands[1]);
+	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_1_PG, eq_commands[2]);
+	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_2_A,  eq_commands[3]);
+	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_2_B,  eq_commands[4]);
+	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_2_PG, eq_commands[5]);
+	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_3_A,  eq_commands[6]);
+	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_3_B,  eq_commands[7]);
+	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_3_PG, eq_commands[8]);
+	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_4_A,  eq_commands[9]);
+	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_4_B,  eq_commands[10]);
+	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_4_PG, eq_commands[11]);
+	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_5_A,  eq_commands[12]);
+	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_5_B,  eq_commands[13]);
+	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_5_PG, eq_commands[14]);
+}
+
+void load_default_eq_values()
+{
+	int i;
+	int first_reg = WM8994_AIF1_DAC1_EQ_BAND_1_A;
+	int size = ARRAY_SIZE(eq_commands);
+	for (i = 0; i < size; i++)
+		eq_commands[i] = wm8994_read(codec, first_reg + i);
+}
+
 /*
  *
  * Declaring the controling misc devices
@@ -784,6 +852,22 @@ static ssize_t digital_headroom_store(struct device *dev,
 	}
 	return size;
 }
+
+DECLARE_BOOL_SHOW(headphone_eq);
+DECLARE_BOOL_STORE_UPDATE_WITH_MUTE(headphone_eq,
+				    update_headphone_eq,
+				    false);
+
+DECLARE_EQ_GAIN_SHOW(1);
+DECLARE_EQ_GAIN_STORE(1);
+DECLARE_EQ_GAIN_SHOW(2);
+DECLARE_EQ_GAIN_STORE(2);
+DECLARE_EQ_GAIN_SHOW(3);
+DECLARE_EQ_GAIN_STORE(3);
+DECLARE_EQ_GAIN_SHOW(4);
+DECLARE_EQ_GAIN_STORE(4);
+DECLARE_EQ_GAIN_SHOW(5);
+DECLARE_EQ_GAIN_STORE(5);
 
 #ifdef CONFIG_SND_VOODOO_DEBUG
 static ssize_t show_wm8994_register_dump(struct device *dev,
@@ -960,6 +1044,30 @@ static DEVICE_ATTR(digital_headroom, S_IRUGO | S_IWUGO,
 		   digital_headroom_show,
 		   digital_headroom_store);
 
+static DEVICE_ATTR(headphone_eq, S_IRUGO | S_IWUGO,
+		   headphone_eq_show,
+		   headphone_eq_store);
+
+static DEVICE_ATTR(headphone_eq_b1_gain, S_IRUGO | S_IWUGO,
+		   headphone_eq_b1_gain_show,
+		   headphone_eq_b1_gain_store);
+
+static DEVICE_ATTR(headphone_eq_b2_gain, S_IRUGO | S_IWUGO,
+		   headphone_eq_b2_gain_show,
+		   headphone_eq_b2_gain_store);
+
+static DEVICE_ATTR(headphone_eq_b3_gain, S_IRUGO | S_IWUGO,
+		   headphone_eq_b3_gain_show,
+		   headphone_eq_b3_gain_store);
+
+static DEVICE_ATTR(headphone_eq_b4_gain, S_IRUGO | S_IWUGO,
+		   headphone_eq_b4_gain_show,
+		   headphone_eq_b4_gain_store);
+
+static DEVICE_ATTR(headphone_eq_b5_gain, S_IRUGO | S_IWUGO,
+		   headphone_eq_b5_gain_show,
+		   headphone_eq_b5_gain_store);
+
 static DEVICE_ATTR(mono_downmix, S_IRUGO | S_IWUGO,
 		   mono_downmix_show,
 		   mono_downmix_store);
@@ -1010,6 +1118,12 @@ static struct attribute *voodoo_sound_attributes[] = {
 	&dev_attr_fll_tuning.attr,
 	&dev_attr_dac_direct.attr,
 	&dev_attr_digital_headroom.attr,
+	&dev_attr_headphone_eq.attr,
+	&dev_attr_headphone_eq_b1_gain.attr,
+	&dev_attr_headphone_eq_b2_gain.attr,
+	&dev_attr_headphone_eq_b3_gain.attr,
+	&dev_attr_headphone_eq_b4_gain.attr,
+	&dev_attr_headphone_eq_b5_gain.attr,
 	&dev_attr_mono_downmix.attr,
 #ifdef CONFIG_SND_VOODOO_DEBUG
 	&dev_attr_wm8994_register_dump.attr,
@@ -1273,4 +1387,7 @@ void voodoo_hook_wm8994_pcm_probe(struct snd_soc_codec *codec_)
 
 	// make a copy of the codec pointer
 	codec = codec_;
+
+	// initialize eq_commands[] from default codec EQ values
+	load_default_eq_values();
 }
