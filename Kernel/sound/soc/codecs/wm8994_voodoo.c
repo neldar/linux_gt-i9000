@@ -681,13 +681,27 @@ void update_digital_headroom(bool with_mute)
 
 void update_headphone_eq(bool with_mute)
 {
-	int gains_1 =
+	int gains_1;
+	int gains_2;
+	DECLARE_WM8994(codec);
+
+	if (!(is_path(HEADPHONES)
+	      && (wm8994->codec_state & PLAYBACK_ACTIVE)
+	      && (wm8994->stream_state & PCM_STREAM_PLAYBACK)
+	      && !(wm8994->codec_state & CALL_ACTIVE)
+	      && (wm8994->rec_path == MIC_OFF)
+	    ) && !is_path(RADIO_HEADPHONES)) {
+		// dont apply the EQ
+		return;
+	    }
+
+	gains_1 =
 	    ((eq_gains[0] + 12) << WM8994_AIF1DAC1_EQ_B1_GAIN_SHIFT) |
 	    ((eq_gains[1] + 12) << WM8994_AIF1DAC1_EQ_B2_GAIN_SHIFT) |
 	    ((eq_gains[2] + 12) << WM8994_AIF1DAC1_EQ_B3_GAIN_SHIFT) |
 	    headphone_eq;
 
-	int gains_2 =
+	gains_2 =
 	    ((eq_gains[3] + 12) << WM8994_AIF1DAC1_EQ_B4_GAIN_SHIFT) |
 	    ((eq_gains[4] + 12) << WM8994_AIF1DAC1_EQ_B5_GAIN_SHIFT);
 
@@ -1317,6 +1331,15 @@ unsigned int voodoo_hook_wm8994_write(struct snd_soc_codec *codec_,
 		    || reg == WM8994_DAC1_RIGHT_VOLUME)
 			value = digital_headroom_get_value(value |
 							   WM8994_DAC1_VU);
+
+		// Headphones EQ virtual hook
+		if (reg == WM8994_AIF1_DAC1_FILTERS_1
+		    || reg == WM8994_AIF1_DAC2_FILTERS_1
+		    || reg == WM8994_AIF2_DAC_FILTERS_1) {
+			bypass_write_hook = true;
+			update_headphone_eq(false);
+			bypass_write_hook = false;
+		}
 
 	}
 #ifdef CONFIG_SND_VOODOO_DEBUG_LOG
