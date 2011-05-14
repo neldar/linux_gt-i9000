@@ -86,7 +86,7 @@ unsigned int digital_headroom = 0;
 
 bool headphone_eq = true;
 short eq_gains[5] = { 0, 0, 0, 0, 0 };
-unsigned int eq_commands[15];
+unsigned int eq_freq_values[3+4+4+4+3];
 
 // keep here a pointer to the codec structure
 struct snd_soc_codec *codec;
@@ -173,7 +173,7 @@ void update_hpvol()
 	// when not on heapdhones or if call is active
 	if (!is_path(HEADPHONES)
 	    || (wm8994->codec_state & CALL_ACTIVE))
-	    	return;
+		return;
 
 	bypass_write_hook = true;
 
@@ -686,6 +686,10 @@ void update_headphone_eq(bool with_mute)
 {
 	int gains_1;
 	int gains_2;
+	int i;
+	int first_reg = WM8994_AIF1_DAC1_EQ_BAND_1_A;
+	int size = ARRAY_SIZE(eq_freq_values);
+
 	DECLARE_WM8994(codec);
 
 	if (!(is_path(HEADPHONES)
@@ -711,30 +715,18 @@ void update_headphone_eq(bool with_mute)
 	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_GAINS_1, gains_1);
 	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_GAINS_2, gains_2);
 
-	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_1_A,  eq_commands[0]);
-	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_1_B,  eq_commands[1]);
-	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_1_PG, eq_commands[2]);
-	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_2_A,  eq_commands[3]);
-	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_2_B,  eq_commands[4]);
-	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_2_PG, eq_commands[5]);
-	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_3_A,  eq_commands[6]);
-	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_3_B,  eq_commands[7]);
-	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_3_PG, eq_commands[8]);
-	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_4_A,  eq_commands[9]);
-	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_4_B,  eq_commands[10]);
-	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_4_PG, eq_commands[11]);
-	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_5_A,  eq_commands[12]);
-	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_5_B,  eq_commands[13]);
-	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_BAND_5_PG, eq_commands[14]);
+
+	for (i = 0; i < size; i++)
+		wm8994_write(codec, first_reg + i, eq_freq_values[i]);
 }
 
 void load_default_eq_values()
 {
 	int i;
 	int first_reg = WM8994_AIF1_DAC1_EQ_BAND_1_A;
-	int size = ARRAY_SIZE(eq_commands);
+	int size = ARRAY_SIZE(eq_freq_values);
 	for (i = 0; i < size; i++)
-		eq_commands[i] = wm8994_read(codec, first_reg + i);
+		eq_freq_values[i] = wm8994_read(codec, first_reg + i);
 }
 
 /*
@@ -1414,6 +1406,6 @@ void voodoo_hook_wm8994_pcm_probe(struct snd_soc_codec *codec_)
 	// make a copy of the codec pointer
 	codec = codec_;
 
-	// initialize eq_commands[] from default codec EQ values
+	// initialize eq_freq_values[] from default codec EQ values
 	load_default_eq_values();
 }
