@@ -878,6 +878,42 @@ DECLARE_EQ_GAIN_STORE(4);
 DECLARE_EQ_GAIN_SHOW(5);
 DECLARE_EQ_GAIN_STORE(5);
 
+static ssize_t headphone_eq_freq_values_show(struct device *dev,
+				     struct device_attribute *attr, char *buf)
+{
+	int i;
+	int first_reg = WM8994_AIF1_DAC1_EQ_BAND_1_A;
+	int size = ARRAY_SIZE(eq_freq_values);
+
+	for (i = 0; i < size; i++)
+		sprintf(buf, "%s0x%X 0x%04X\n", buf, first_reg + i,
+			wm8994_read(codec, first_reg + i));
+
+	return sprintf(buf, "%s", buf);
+
+
+}
+
+static ssize_t headphone_eq_freq_values_store(struct device *dev,
+				      struct device_attribute *attr,
+				      const char *buf, size_t size)
+{
+	int i = 0;
+	int first_reg = WM8994_AIF1_DAC1_EQ_BAND_1_A;
+	int commands_size = ARRAY_SIZE(eq_freq_values);
+	short unsigned int val;
+	unsigned int bytes_read = 0;
+
+	while (sscanf(buf, "%hx%n", &val, &bytes_read) == 1) {
+		if (i >= commands_size)
+			break;
+		buf += bytes_read;
+		wm8994_write(codec, first_reg + i, val);
+		i++;
+	}
+	return size;
+}
+
 #ifdef CONFIG_SND_VOODOO_DEBUG
 static ssize_t show_wm8994_register_dump(struct device *dev,
 					 struct device_attribute *attr,
@@ -1077,6 +1113,10 @@ static DEVICE_ATTR(headphone_eq_b5_gain, S_IRUGO | S_IWUGO,
 		   headphone_eq_b5_gain_show,
 		   headphone_eq_b5_gain_store);
 
+static DEVICE_ATTR(headphone_eq_freq_values, S_IRUGO | S_IWUGO,
+		   headphone_eq_freq_values_show,
+		   headphone_eq_freq_values_store);
+
 static DEVICE_ATTR(mono_downmix, S_IRUGO | S_IWUGO,
 		   mono_downmix_show,
 		   mono_downmix_store);
@@ -1133,6 +1173,7 @@ static struct attribute *voodoo_sound_attributes[] = {
 	&dev_attr_headphone_eq_b3_gain.attr,
 	&dev_attr_headphone_eq_b4_gain.attr,
 	&dev_attr_headphone_eq_b5_gain.attr,
+	&dev_attr_headphone_eq_freq_values.attr,
 	&dev_attr_mono_downmix.attr,
 #ifdef CONFIG_SND_VOODOO_DEBUG
 	&dev_attr_wm8994_register_dump.attr,
