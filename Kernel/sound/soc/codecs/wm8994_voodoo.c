@@ -672,13 +672,13 @@ void update_digital_headroom(bool with_mute)
 {
 	unsigned short val1, val2;
 	val1 = digital_headroom_get_value(wm8994_read(codec,
-						WM8994_DAC1_LEFT_VOLUME));
+						WM8994_AIF1_DAC1_LEFT_VOLUME));
 	val2 = digital_headroom_get_value(wm8994_read(codec,
-						WM8994_DAC1_RIGHT_VOLUME));
+						WM8994_AIF1_DAC1_RIGHT_VOLUME));
 
 	bypass_write_hook = true;
-	wm8994_write(codec, WM8994_DAC1_LEFT_VOLUME, WM8994_DAC1_VU | val1);
-	wm8994_write(codec, WM8994_DAC1_RIGHT_VOLUME, WM8994_DAC1_VU | val2);
+	wm8994_write(codec, WM8994_AIF1_DAC1_LEFT_VOLUME, WM8994_DAC1_VU | val1);
+	wm8994_write(codec, WM8994_AIF1_DAC1_RIGHT_VOLUME, WM8994_DAC1_VU | val2);
 	bypass_write_hook = false;
 }
 
@@ -1375,8 +1375,8 @@ unsigned int voodoo_hook_wm8994_write(struct snd_soc_codec *codec_,
 			value = dac_direct_get_value(value, false);
 
 		// Digital Headroom virtual hook
-		if (reg == WM8994_DAC1_LEFT_VOLUME
-		    || reg == WM8994_DAC1_RIGHT_VOLUME)
+		if (reg == WM8994_AIF1_DAC1_LEFT_VOLUME
+		    || reg == WM8994_AIF1_DAC1_RIGHT_VOLUME)
 			value = digital_headroom_get_value(value);
 
 		// Headphones EQ virtual hook
