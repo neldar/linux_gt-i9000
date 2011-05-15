@@ -677,8 +677,10 @@ void update_digital_headroom(bool with_mute)
 						WM8994_AIF1_DAC1_RIGHT_VOLUME));
 
 	bypass_write_hook = true;
-	wm8994_write(codec, WM8994_AIF1_DAC1_LEFT_VOLUME, WM8994_DAC1_VU | val1);
-	wm8994_write(codec, WM8994_AIF1_DAC1_RIGHT_VOLUME, WM8994_DAC1_VU | val2);
+	wm8994_write(codec, WM8994_AIF1_DAC1_LEFT_VOLUME,
+		     WM8994_DAC1_VU | val1);
+	wm8994_write(codec, WM8994_AIF1_DAC1_RIGHT_VOLUME,
+		     WM8994_DAC1_VU | val2);
 	bypass_write_hook = false;
 }
 
@@ -736,12 +738,12 @@ void apply_saturation_prevention_drc()
 {
 	unsigned short val;
 
-	// configure the DRC to avoid saturation: dont actually compress signal
+	// configure the DRC to avoid saturation: not actually compress signal
 	// gain is unmodified. Should affect only what's higher than 0 dBFS
 	val = wm8994_read(codec, WM8994_AIF1_DRC1_1);
 
-	// disable Quick Release and Anti Clip (do more harm than good
-	// for this particular usage
+	// disable Quick Release and Anti Clip
+	// both do do more harm than good for this particular usage
 	val &= ~(WM8994_AIF1DRC1_QR_MASK);
 	val &= ~(WM8994_AIF1DRC1_ANTICLIP_MASK);
 
