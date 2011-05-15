@@ -1234,6 +1234,13 @@ void update_enable()
 		printk("Voodoo sound: initializing driver v%d\n",
 		       VOODOO_SOUND_VERSION);
 
+#ifdef CONFIG_SND_VOODOO_DEBUG
+		printk("Voodoo sound: debug & dev tools enabled\n");
+#endif
+#ifdef CONFIG_SND_VOODOO_DEBUG_LOG
+		printk("Voodoo sound: wm8994_write logging enabled\n");
+#endif
+
 		misc_register(&voodoo_sound_device);
 		if (sysfs_create_group(&voodoo_sound_device.this_device->kobj,
 				       &voodoo_sound_group) < 0) {
