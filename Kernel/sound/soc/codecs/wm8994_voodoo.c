@@ -702,6 +702,9 @@ void update_headphone_eq(bool with_mute)
 		return;
 	    }
 
+	if (headphone_eq)
+		apply_saturation_prevention_drc();
+
 	gains_1 =
 	    ((eq_gains[0] + 12) << WM8994_AIF1DAC1_EQ_B1_GAIN_SHIFT) |
 	    ((eq_gains[1] + 12) << WM8994_AIF1DAC1_EQ_B2_GAIN_SHIFT) |
@@ -715,7 +718,6 @@ void update_headphone_eq(bool with_mute)
 	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_GAINS_1, gains_1);
 	wm8994_write(codec, WM8994_AIF1_DAC1_EQ_GAINS_2, gains_2);
 
-
 	for (i = 0; i < size; i++)
 		wm8994_write(codec, first_reg + i, eq_freq_values[i]);
 }
@@ -725,8 +727,32 @@ void load_default_eq_values()
 	int i;
 	int first_reg = WM8994_AIF1_DAC1_EQ_BAND_1_A;
 	int size = ARRAY_SIZE(eq_freq_values);
+
 	for (i = 0; i < size; i++)
 		eq_freq_values[i] = wm8994_read(codec, first_reg + i);
+}
+
+void apply_saturation_prevention_drc()
+{
+	unsigned short val;
+
+	// configure the DRC to avoid saturation: dont actually compress signal
+	// gain is unmodified. Should affect only what's higher than 0 dBFS
+	val = wm8994_read(codec, WM8994_AIF1_DRC1_1);
+
+	// disable Quick Release and Anti Clip (do more harm than good
+	// for this particular usage
+	val &= ~(WM8994_AIF1DRC1_QR_MASK);
+	val &= ~(WM8994_AIF1DRC1_ANTICLIP_MASK);
+
+	// enable DRC
+	val |= WM8994_AIF1DAC1_DRC_ENA;
+	wm8994_write(codec, WM8994_AIF1_DRC1_1, val);
+
+	// Above knee: flat (what really avoid the saturation)
+	val = wm8994_read(codec, WM8994_AIF1_DRC1_3);
+	val |= (0x5 << WM8994_AIF1DRC1_HI_COMP_SHIFT);
+	wm8994_write(codec, WM8994_AIF1_DRC1_3, val);
 }
 
 /*
@@ -757,8 +783,8 @@ static ssize_t headphone_amplifier_level_store(struct device *dev,
 		if (hprvol > 62)
 			hprvol = 62;
 
-		update_hpvol();
 		update_digital_headroom(false);
+		update_hpvol();
 	}
 	return size;
 }
