@@ -28,7 +28,6 @@
 enum unified_path { HEADPHONES, RADIO_HEADPHONES, SPEAKER, MAIN_MICROPHONE };
 
 bool is_path(int unified_path);
-unsigned short tune_fll_value(unsigned short val);
 unsigned int voodoo_hook_wm8994_write(struct snd_soc_codec *codec,
 				      unsigned int reg, unsigned int value);
 void voodoo_hook_fmradio_headset(void);
