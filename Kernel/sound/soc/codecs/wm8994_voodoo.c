@@ -1006,7 +1006,12 @@ static ssize_t store_wm8994_write(struct device *dev,
 
 	while (sscanf(buf, "%hx %hx%n", &reg, &val, &bytes_read) == 2) {
 		buf += bytes_read;
+#ifdef CONFIG_SND_VOODOO_DEBUG_LOG
+		printk("Voodoo sound: read from sysfs: %X, %X\n", reg, val);
+#endif
+		bypass_write_hook = true;
 		wm8994_write(codec, reg, val);
+		bypass_write_hook = false;
 	}
 	return size;
 }
