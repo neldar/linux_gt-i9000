@@ -69,9 +69,10 @@ static void enable_led_notification(void)
 	if (!bln_suspended)
 		return;
 
+	bln_ongoing = true;
+
 	bln_enable_backlights();
 	pr_info("%s: notification led enabled\n", __FUNCTION__);
-	bln_ongoing = true;
 }
 
 static void disable_led_notification(void)
