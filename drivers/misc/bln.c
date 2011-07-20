@@ -96,6 +96,12 @@ static ssize_t backlightnotification_status_write(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
 {
 	unsigned int data;
+
+	if(!bln_imp) {
+		pr_err("%s: no BLN implementation registered!\n", __FUNCTION__);
+		return size;
+	}
+
 	if(sscanf(buf, "%u\n", &data) == 1) {
 		pr_devel("%s: %u \n", __FUNCTION__, data);
 		if (data == 1) {
