@@ -24,6 +24,12 @@ static struct bln_implementation *bln_imp = NULL;
 
 #define BACKLIGHTNOTIFICATION_VERSION 9
 
+static void reset_bln_states(void)
+{
+	bln_blink_state = 0;
+	bln_ongoing = false;
+}
+
 static void bln_enable_backlights(void)
 {
 	if (bln_imp)
@@ -44,6 +50,8 @@ static void bln_early_suspend(struct early_suspend *h)
 static void bln_late_resume(struct early_suspend *h)
 {
 	bln_suspended = false;
+
+	reset_bln_states();
 }
 
 static struct early_suspend bln_suspend_data = {
@@ -70,8 +78,7 @@ static void disable_led_notification(void)
 {
 	pr_info("%s: notification led disabled\n", __FUNCTION__);
 
-	bln_blink_state = 0;
-	bln_ongoing = false;
+	reset_bln_states();
 
 	if (bln_suspended)
 		bln_disable_backlights();
