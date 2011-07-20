@@ -468,6 +468,7 @@ config LEVEL
 
 config GENERIC_BLN
        bool "Generic BLN support for backlight notification"
+       depends on EXPERIMENTAL
        default y
        help
          Say Y here to enable the backlight notification
