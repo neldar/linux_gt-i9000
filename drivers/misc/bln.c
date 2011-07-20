@@ -57,6 +57,10 @@ static void enable_led_notification(void)
 	if (!bln_enabled)
 		return;
 
+	/* dont allow led notifications while the screen is on */
+	if (!bln_suspended)
+		return;
+
 	bln_enable_backlights();
 	pr_info("%s: notification led enabled\n", __FUNCTION__);
 	bln_ongoing = true;
