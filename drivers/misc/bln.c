@@ -260,6 +260,12 @@ static struct miscdevice bln_device = {
 	.name = "backlightnotification",
 };
 
+/**
+ *	register_bln_implementation	- register a bln implementation of a touchkey device device
+ *	@imp: bln implementation structure
+ *
+ *	Register a bln implementation with the bln kernel module.
+ */
 void register_bln_implementation(struct bln_implementation *imp)
 {
 	bln_imp = imp;
@@ -268,6 +274,9 @@ void register_bln_implementation(struct bln_implementation *imp)
 }
 EXPORT_SYMBOL(register_bln_implementation);
 
+/**
+ *	bln_is_ongoing - check if a bln (led) notification is ongoing
+ */
 bool bln_is_ongoing()
 {
 	return bln_ongoing;
