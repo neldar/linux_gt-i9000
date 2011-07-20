@@ -24,6 +24,18 @@ static struct bln_implementation *bln_imp = NULL;
 
 #define BACKLIGHTNOTIFICATION_VERSION 9
 
+/* FIXME: find something smarter */
+static int gen_all_leds_mask(void)
+{
+	int i = 0;
+	int mask = 0x0;
+
+	for(; i < bln_imp->led_count; i++)
+		mask |= 1 << i;
+
+	return mask;
+}
+
 static void reset_bln_states(void)
 {
 	bln_blink_state = 0;
@@ -33,13 +45,13 @@ static void reset_bln_states(void)
 static void bln_enable_backlights(void)
 {
 	if (bln_imp)
-		bln_imp->enable();
+		bln_imp->enable(gen_all_leds_mask());
 }
 
 static void bln_disable_backlights(void)
 {
 	if (bln_imp)
-		bln_imp->disable();
+		bln_imp->disable(gen_all_leds_mask());
 }
 
 static void bln_power_on(void)
@@ -208,11 +220,23 @@ static ssize_t backlightnotification_version(struct device *dev,
 	return sprintf(buf, "%u\n", BACKLIGHTNOTIFICATION_VERSION);
 }
 
+static ssize_t led_count_read(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	unsigned int ret = 0x0;
+
+	if (bln_imp)
+		ret = bln_imp->led_count;
+
+	return sprintf(buf,"%u\n", ret);
+}
+
 static DEVICE_ATTR(blink_control, S_IRUGO | S_IWUGO, blink_control_read,
 		blink_control_write);
 static DEVICE_ATTR(enabled, S_IRUGO | S_IWUGO,
 		backlightnotification_status_read,
 		backlightnotification_status_write);
+static DEVICE_ATTR(led_count, S_IRUGO , led_count_read, NULL);
 static DEVICE_ATTR(notification_led, S_IRUGO | S_IWUGO,
 		notification_led_status_read,
 		notification_led_status_write);
@@ -221,6 +245,7 @@ static DEVICE_ATTR(version, S_IRUGO , backlightnotification_version, NULL);
 static struct attribute *bln_notification_attributes[] = {
 	&dev_attr_blink_control.attr,
 	&dev_attr_enabled.attr,
+	&dev_attr_led_count.attr,
 	&dev_attr_notification_led.attr,
 	&dev_attr_version.attr,
 	NULL
