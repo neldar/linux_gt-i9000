@@ -102,22 +102,24 @@ static ssize_t backlightnotification_status_write(struct device *dev,
 		return size;
 	}
 
-	if(sscanf(buf, "%u\n", &data) == 1) {
-		pr_devel("%s: %u \n", __FUNCTION__, data);
-		if (data == 1) {
-			pr_info("%s: BLN function enabled\n", __FUNCTION__);
-			bln_enabled = true;
-		} else if (data == 0) {
-			pr_info("%s: BLN function disabled\n", __FUNCTION__);
-			bln_enabled = false;
-			if (bln_ongoing)
-				disable_led_notification();
-		} else {
-			pr_info("%s: invalid input range %u\n", __FUNCTION__,
-					data);
-		}
+	if (sscanf(buf, "%u\n", &data) != 1) {
+			pr_info("%s: input error\n", __FUNCTION__);
+			return size;
+	}
+
+	pr_devel("%s: %u \n", __FUNCTION__, data);
+
+	if (data == 1) {
+		pr_info("%s: BLN function enabled\n", __FUNCTION__);
+		bln_enabled = true;
+	} else if (data == 0) {
+		pr_info("%s: BLN function disabled\n", __FUNCTION__);
+		bln_enabled = false;
+		if (bln_ongoing)
+			disable_led_notification();
 	} else {
-		pr_info("%s: invalid input\n", __FUNCTION__);
+		pr_info("%s: invalid input range %u\n", __FUNCTION__,
+				data);
 	}
 
 	return size;
@@ -134,16 +136,17 @@ static ssize_t notification_led_status_write(struct device *dev,
 {
 	unsigned int data;
 
-	if (sscanf(buf, "%u\n", &data) == 1) {
-		if (data == 1)
-			enable_led_notification();
-		else if (data == 0)
-			disable_led_notification();
-		else
-			pr_info("%s: wrong input %u\n", __FUNCTION__, data);
-	} else {
-		pr_info("%s: input error\n", __FUNCTION__);
+	if (sscanf(buf, "%u\n", &data) != 1) {
+			pr_info("%s: input error\n", __FUNCTION__);
+			return size;
 	}
+
+	if (data == 1)
+		enable_led_notification();
+	else if (data == 0)
+		disable_led_notification();
+	else
+		pr_info("%s: wrong input %u\n", __FUNCTION__, data);
 
 	return size;
 }
@@ -162,22 +165,23 @@ static ssize_t blink_control_write(struct device *dev,
 	if (!bln_ongoing)
 		return size;
 
-	if (sscanf(buf, "%u\n", &data) == 1) {
-		/* reversed logic:
-		 * 1 = leds off
-		 * 0 = leds on
-		 */
-		if (data == 1) {
-			bln_blink_state = 1;
-			bln_disable_backlights();
-		} else if (data == 0) {
-			bln_blink_state = 0;
-			bln_enable_backlights();
-		} else {
-			pr_info("%s: wrong input %u\n", __FUNCTION__, data);
-		}
-	} else {
+	if (sscanf(buf, "%u\n", &data) != 1) {
 		pr_info("%s: input error\n", __FUNCTION__);
+		return size;
+	}
+
+	/* reversed logic:
+	 * 1 = leds off
+	 * 0 = leds on
+	 */
+	if (data == 1) {
+		bln_blink_state = 1;
+		bln_disable_backlights();
+	} else if (data == 0) {
+		bln_blink_state = 0;
+		bln_enable_backlights();
+	} else {
+		pr_info("%s: wrong input %u\n", __FUNCTION__, data);
 	}
 
 	return size;
