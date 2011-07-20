@@ -42,6 +42,18 @@ static void bln_disable_backlights(void)
 		bln_imp->disable();
 }
 
+static void bln_power_on(void)
+{
+	if (bln_imp)
+		bln_imp->power_on();
+}
+
+static void bln_power_off(void)
+{
+	if (bln_imp)
+		bln_imp->power_off();
+}
+
 static void bln_early_suspend(struct early_suspend *h)
 {
 	bln_suspended = true;
@@ -71,6 +83,7 @@ static void enable_led_notification(void)
 
 	bln_ongoing = true;
 
+	bln_power_on();
 	bln_enable_backlights();
 	pr_info("%s: notification led enabled\n", __FUNCTION__);
 }
@@ -81,8 +94,10 @@ static void disable_led_notification(void)
 
 	reset_bln_states();
 
-	if (bln_suspended)
+	if (bln_suspended) {
 		bln_disable_backlights();
+		bln_power_off();
+	}
 
 }
 
