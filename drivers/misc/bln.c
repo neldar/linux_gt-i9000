@@ -16,7 +16,7 @@
 #include <linux/bln.h>
 #include <linux/mutex.h>
 
-static bool bln_enabled = true; /* is BLN function is enabled */
+static bool bln_enabled = false;
 static bool bln_ongoing = false; /* ongoing LED Notification */
 static int bln_blink_state = 0;
 static bool bln_suspended = false; /* is system suspended */
@@ -219,6 +219,8 @@ static struct miscdevice bln_device = {
 void register_bln_implementation(struct bln_implementation *imp)
 {
 	bln_imp = imp;
+
+	bln_enabled = true;
 }
 EXPORT_SYMBOL(register_bln_implementation);
 
