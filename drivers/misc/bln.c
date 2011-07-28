@@ -102,15 +102,14 @@ static void enable_led_notification(void)
 
 static void disable_led_notification(void)
 {
-	pr_info("%s: notification led disabled\n", __FUNCTION__);
-
-	reset_bln_states();
-
-	if (bln_suspended) {
+	if (bln_suspended && bln_ongoing) {
 		bln_disable_backlights();
 		bln_power_off();
 	}
 
+	reset_bln_states();
+
+	pr_info("%s: notification led disabled\n", __FUNCTION__);
 }
 
 static ssize_t backlightnotification_status_read(struct device *dev,
