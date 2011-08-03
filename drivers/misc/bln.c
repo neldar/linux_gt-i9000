@@ -22,13 +22,14 @@ static int bln_blink_state = 0;
 static bool bln_suspended = false; /* is system suspended */
 static struct bln_implementation *bln_imp = NULL;
 
+static long unsigned int notification_led_mask = 0x0;
+
 #ifdef CONFIG_GENERIC_BLN_EMULATE_BUTTONS_LED
 static bool buttons_led_enabled = false;
 #endif
 
 #define BACKLIGHTNOTIFICATION_VERSION 9
 
-/* FIXME: find something smarter */
 static int gen_all_leds_mask(void)
 {
 	int i = 0;
@@ -40,33 +41,37 @@ static int gen_all_leds_mask(void)
 	return mask;
 }
 
+static int get_led_mask(void){
+	return (notification_led_mask != 0) ? notification_led_mask: gen_all_leds_mask();
+}
+
 static void reset_bln_states(void)
 {
 	bln_blink_state = 0;
 	bln_ongoing = false;
 }
 
-static void bln_enable_backlights(void)
+static void bln_enable_backlights(int mask)
 {
-	if (bln_imp)
-		bln_imp->enable(gen_all_leds_mask());
+	if (bln_imp && bln_imp->enable)
+		bln_imp->enable(mask);
 }
 
-static void bln_disable_backlights(void)
+static void bln_disable_backlights(int mask)
 {
-	if (bln_imp)
-		bln_imp->disable(gen_all_leds_mask());
+	if (bln_imp && bln_imp->disable)
+		bln_imp->disable(mask);
 }
 
 static void bln_power_on(void)
 {
-	if (bln_imp)
+	if (bln_imp && bln_imp->power_on)
 		bln_imp->power_on();
 }
 
 static void bln_power_off(void)
 {
-	if (bln_imp)
+	if (bln_imp && bln_imp->power_off)
 		bln_imp->power_off();
 }
 
@@ -100,14 +105,14 @@ static void enable_led_notification(void)
 	bln_ongoing = true;
 
 	bln_power_on();
-	bln_enable_backlights();
+	bln_enable_backlights(get_led_mask());
 	pr_info("%s: notification led enabled\n", __FUNCTION__);
 }
 
 static void disable_led_notification(void)
 {
 	if (bln_suspended && bln_ongoing) {
-		bln_disable_backlights();
+		bln_disable_backlights(gen_all_leds_mask());
 		bln_power_off();
 	}
 
@@ -181,6 +186,31 @@ static ssize_t notification_led_status_write(struct device *dev,
 	return size;
 }
 
+static ssize_t notification_led_mask_read(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf,"%lu\n", notification_led_mask);
+}
+
+static ssize_t notification_led_mask_write(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	unsigned int data;
+
+	if (sscanf(buf, "%u\n", &data) != 1) {
+			pr_info("%s: input error\n", __FUNCTION__);
+			return size;
+	}
+
+	if(data & gen_all_leds_mask()){
+		notification_led_mask = data;
+	} else {
+		notification_led_mask = 0x0;
+	}
+
+	return size;
+}
+
 static ssize_t blink_control_read(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -206,10 +236,10 @@ static ssize_t blink_control_write(struct device *dev,
 	 */
 	if (data == 1) {
 		bln_blink_state = 1;
-		bln_disable_backlights();
+		bln_disable_backlights(get_led_mask());
 	} else if (data == 0) {
 		bln_blink_state = 0;
-		bln_enable_backlights();
+		bln_enable_backlights(get_led_mask());
 	} else {
 		pr_info("%s: wrong input %u\n", __FUNCTION__, data);
 	}
@@ -255,12 +285,12 @@ static ssize_t buttons_led_status_write(struct device *dev,
 		if(!bln_suspended){
 			buttons_led_enabled = true;
 			bln_power_on();
-			bln_enable_backlights();
+			bln_enable_backlights(gen_all_leds_mask());
 		}
 	} else if (data == 0) {
 		if(!bln_suspended){
 			buttons_led_enabled = false;
-			bln_disable_backlights();
+			bln_disable_backlights(gen_all_leds_mask());
 		}
 	} else {
 		pr_info("%s: wrong input %u\n", __FUNCTION__, data);
@@ -283,6 +313,9 @@ static DEVICE_ATTR(led_count, S_IRUGO , led_count_read, NULL);
 static DEVICE_ATTR(notification_led, S_IRUGO | S_IWUGO,
 		notification_led_status_read,
 		notification_led_status_write);
+static DEVICE_ATTR(notification_led_mask, S_IRUGO | S_IWUGO,
+		notification_led_mask_read,
+		notification_led_mask_write);
 static DEVICE_ATTR(version, S_IRUGO , backlightnotification_version, NULL);
 
 static struct attribute *bln_notification_attributes[] = {
@@ -290,6 +323,7 @@ static struct attribute *bln_notification_attributes[] = {
 	&dev_attr_enabled.attr,
 	&dev_attr_led_count.attr,
 	&dev_attr_notification_led.attr,
+	&dev_attr_notification_led_mask.attr,
 #ifdef CONFIG_GENERIC_BLN_EMULATE_BUTTONS_LED
 	&dev_attr_buttons_led.attr,
 #endif
@@ -314,9 +348,10 @@ static struct miscdevice bln_device = {
  */
 void register_bln_implementation(struct bln_implementation *imp)
 {
-	bln_imp = imp;
-
-	bln_enabled = true;
+	if(imp){
+		bln_imp = imp;
+		bln_enabled = true;
+	}
 }
 EXPORT_SYMBOL(register_bln_implementation);
 
