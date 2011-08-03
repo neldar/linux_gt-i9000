@@ -22,6 +22,10 @@ static int bln_blink_state = 0;
 static bool bln_suspended = false; /* is system suspended */
 static struct bln_implementation *bln_imp = NULL;
 
+#ifdef CONFIG_GENERIC_BLN_EMULATE_BUTTONS_LED
+static bool buttons_led_enabled = false;
+#endif
+
 #define BACKLIGHTNOTIFICATION_VERSION 9
 
 /* FIXME: find something smarter */
@@ -230,6 +234,46 @@ static ssize_t led_count_read(struct device *dev,
 	return sprintf(buf,"%u\n", ret);
 }
 
+#ifdef CONFIG_GENERIC_BLN_EMULATE_BUTTONS_LED
+static ssize_t buttons_led_status_read(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf,"%u\n", (buttons_led_enabled ? 1 : 0));
+}
+
+static ssize_t buttons_led_status_write(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	unsigned int data;
+
+	if (sscanf(buf, "%u\n", &data) != 1) {
+			pr_info("%s: input error\n", __FUNCTION__);
+			return size;
+	}
+
+	if (data == 1) {
+		if(!bln_suspended){
+			buttons_led_enabled = true;
+			bln_power_on();
+			bln_enable_backlights();
+		}
+	} else if (data == 0) {
+		if(!bln_suspended){
+			buttons_led_enabled = false;
+			bln_disable_backlights();
+		}
+	} else {
+		pr_info("%s: wrong input %u\n", __FUNCTION__, data);
+	}
+
+	return size;
+}
+
+static DEVICE_ATTR(buttons_led, S_IRUGO | S_IWUGO,
+		buttons_led_status_read,
+		buttons_led_status_write);
+#endif
+
 static DEVICE_ATTR(blink_control, S_IRUGO | S_IWUGO, blink_control_read,
 		blink_control_write);
 static DEVICE_ATTR(enabled, S_IRUGO | S_IWUGO,
@@ -246,6 +290,9 @@ static struct attribute *bln_notification_attributes[] = {
 	&dev_attr_enabled.attr,
 	&dev_attr_led_count.attr,
 	&dev_attr_notification_led.attr,
+#ifdef CONFIG_GENERIC_BLN_EMULATE_BUTTONS_LED
+	&dev_attr_buttons_led.attr,
+#endif
 	&dev_attr_version.attr,
 	NULL
 };
