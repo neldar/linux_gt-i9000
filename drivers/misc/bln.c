@@ -350,7 +350,6 @@ void register_bln_implementation(struct bln_implementation *imp)
 {
 	if(imp){
 		bln_imp = imp;
-		bln_enabled = true;
 	}
 }
 EXPORT_SYMBOL(register_bln_implementation);
