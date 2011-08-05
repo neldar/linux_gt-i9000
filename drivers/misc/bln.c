@@ -124,7 +124,19 @@ static void disable_led_notification(void)
 static ssize_t backlightnotification_status_read(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%u\n", (bln_enabled ? 1 : 0));
+	int ret = 0;
+		
+	if(bln_imp) {
+		if(bln_enabled) {
+			ret = 1;
+		} else {
+			ret = 0;
+		}
+	} else {
+		ret = -1;
+	}
+		
+	return sprintf(buf, "%u\n", ret);
 }
 
 static ssize_t backlightnotification_status_write(struct device *dev,
