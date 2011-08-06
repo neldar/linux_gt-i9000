@@ -53,25 +53,25 @@ static void reset_bln_states(void)
 
 static void bln_enable_backlights(int mask)
 {
-	if (bln_imp && bln_imp->enable)
+	if (likely(bln_imp && bln_imp->enable))
 		bln_imp->enable(mask);
 }
 
 static void bln_disable_backlights(int mask)
 {
-	if (bln_imp && bln_imp->disable)
+	if (likely(bln_imp && bln_imp->disable))
 		bln_imp->disable(mask);
 }
 
 static void bln_power_on(void)
 {
-	if (bln_imp && bln_imp->power_on)
+	if (likely(bln_imp && bln_imp->power_on))
 		bln_imp->power_on();
 }
 
 static void bln_power_off(void)
 {
-	if (bln_imp && bln_imp->power_off)
+	if (likely(bln_imp && bln_imp->power_off))
 		bln_imp->power_off();
 }
 
@@ -126,7 +126,7 @@ static ssize_t backlightnotification_status_read(struct device *dev,
 {
 	int ret = 0;
 		
-	if(bln_imp) {
+	if(likely(bln_imp)) {
 		if(bln_enabled) {
 			ret = 1;
 		} else {
@@ -144,7 +144,7 @@ static ssize_t backlightnotification_status_write(struct device *dev,
 {
 	unsigned int data;
 
-	if(!bln_imp) {
+	if(unlikely(!bln_imp)) {
 		pr_err("%s: no BLN implementation registered!\n", __FUNCTION__);
 		return size;
 	}
@@ -360,7 +360,7 @@ static struct miscdevice bln_device = {
  */
 void register_bln_implementation(struct bln_implementation *imp)
 {
-	if(imp){
+	if(likely(imp)){
 		bln_imp = imp;
 	}
 }
